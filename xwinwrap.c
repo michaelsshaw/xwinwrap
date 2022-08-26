@@ -288,6 +288,9 @@ int main(int argc, char **argv)
     bool skip_pager = false;
     bool daemonize = false;
 
+    char* pre_wid;
+    char* post_wid;
+
     win_shape   shape = SHAPE_RECT;
     Pixmap      mask;
     GC          mask_gc;
@@ -420,10 +423,17 @@ int main(int argc, char **argv)
 
     for (i = i + 1; i < argc; i++)
     {
-        if (strcmp (argv[i], "WID") == 0)
-            addArguments (widArgv, 1);
-        else
+        char* wid_pos = strstr(argv[i], "{WID}");
+        if(wid_pos != NULL) {
+            size_t num_to_copy = (size_t) wid_pos - (size_t) argv[i];
+            pre_wid = malloc(num_to_copy + 1);
+            strncat(pre_wid, argv[i], num_to_copy);
+            post_wid = malloc(strlen(wid_pos) + num_to_copy - 5 + 1);
+            strncat(post_wid, wid_pos + 5, strlen(wid_pos) - num_to_copy - 5);
+            addArguments(widArgv, 1);
+        } else {
             addArguments (&argv[i], 1);
+        }
     }
 
     if (!nChildArgv)
@@ -698,7 +708,9 @@ int main(int argc, char **argv)
 
     XSync (display, window.window);
 
-    sprintf (widArg, "0x%x", (int) window.window);
+    snprintf(widArg, 255, "%s0x%x%s", pre_wid, (int) window.window, post_wid);
+    free(pre_wid);
+    free(post_wid);
 
     pid = fork ();
 
